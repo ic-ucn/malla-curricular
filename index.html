@@ -603,6 +603,45 @@
       .mc-theme-toggle, .mc-zoom-btn { border: 1px solid ButtonText; }
     }
 
+    /* ============ MOBILE PEEK PILL ============ */
+    .mc-peek {
+      display: none; /* hidden on desktop, shown via JS on touch */
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(80px);
+      z-index: 250; max-width: calc(100vw - 32px); width: auto;
+      padding: 10px 14px; border-radius: 999px;
+      background: rgba(15,23,42,0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+      align-items: center; gap: 10px;
+      opacity: 0; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .mc-peek--visible {
+      display: flex; opacity: 1; transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+    .mc-peek__dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .mc-peek__text {
+      font-size: 0.78rem; font-weight: 600; color: var(--mc-text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;
+    }
+    .mc-peek__sct {
+      font-size: 0.65rem; color: var(--mc-text-muted); white-space: nowrap; flex-shrink: 0;
+    }
+    .mc-peek__btn {
+      background: rgba(99,102,241,0.9); color: #fff; border: none; border-radius: 999px;
+      padding: 5px 14px; font-size: 0.68rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: background 0.15s ease;
+    }
+    .mc-peek__btn:active { background: rgba(99,102,241,1); transform: scale(0.95); }
+    .mc-light .mc-peek {
+      background: rgba(255,255,255,0.92); border-color: rgba(0,0,0,0.1);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
     /* ============ RESPONSIVE ============ */
 
     /* --- Laptop / small desktop (≤1280px) --- */
@@ -899,6 +938,14 @@
       <span id="mc-search-status"></span>
       <span style="font-size:0.6rem;opacity:0.5">Ctrl+F</span>
     </div>
+  </div>
+
+  <!-- ======== MOBILE PEEK PILL ======== -->
+  <div id="mc-peek" class="mc-peek" aria-hidden="true">
+    <span class="mc-peek__dot" id="mc-peek-dot"></span>
+    <span class="mc-peek__text" id="mc-peek-text"></span>
+    <span class="mc-peek__sct" id="mc-peek-sct"></span>
+    <button class="mc-peek__btn" id="mc-peek-btn">Ver info</button>
   </div>
 
   <script>
@@ -1444,6 +1491,7 @@
         _modalOpen = false;
         modalOverlay.classList.remove('mc-modal-overlay--visible');
         modalOverlay.setAttribute('aria-hidden', 'true');
+        MC.clearHighlight();
         if (_modalPrevFocus && _modalPrevFocus.focus) _modalPrevFocus.focus();
         _modalPrevFocus = null;
       };
@@ -1457,16 +1505,101 @@
       var gridEl = document.getElementById('mc-grid');
       var currentHoverCard = null;
 
-      // Click opens modal
-      gridEl.addEventListener('click', function(e) {
-        var card = e.target.closest('.mc-card');
-        if (!card) return;
-        var code = card.dataset.mcCode;
-        if (code) MC.openModal(code);
+      // ---- Touch detection ----
+      var _isTouch = false;
+      window.addEventListener('touchstart', function() { _isTouch = true; }, { once: true, passive: true });
+
+      // ---- Peek pill (mobile) ----
+      var peekEl = document.getElementById('mc-peek');
+      var peekDot = document.getElementById('mc-peek-dot');
+      var peekText = document.getElementById('mc-peek-text');
+      var peekSct = document.getElementById('mc-peek-sct');
+      var peekBtn = document.getElementById('mc-peek-btn');
+      var _peekCode = null;
+
+      function showPeek(code) {
+        var subject = MC.getSubjectByCode(code);
+        if (!subject) return;
+        _peekCode = code;
+        var color = AREA_COLORS_HEX[subject.area] || '#666';
+        peekDot.style.background = color;
+        peekText.textContent = subject.name;
+        peekSct.textContent = subject.sct + ' SCT';
+        // Force reflow for animation
+        peekEl.classList.remove('mc-peek--visible');
+        void peekEl.offsetWidth;
+        peekEl.classList.add('mc-peek--visible');
+        peekEl.setAttribute('aria-hidden', 'false');
+      }
+
+      function hidePeek() {
+        _peekCode = null;
+        peekEl.classList.remove('mc-peek--visible');
+        peekEl.setAttribute('aria-hidden', 'true');
+      }
+
+      peekBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (_peekCode) {
+          MC.openModal(_peekCode);
+          hidePeek();
+          MC.clearHighlight();
+        }
       });
 
-      // Hover: highlight + tooltip
+      // ---- Click handler: touch = highlight + peek, desktop = modal ----
+      var _selectedCard = null;
+
+      gridEl.addEventListener('click', function(e) {
+        var card = e.target.closest('.mc-card');
+
+        if (_isTouch) {
+          // TOUCH: tap = highlight + peek pill
+          if (!card) {
+            // Tap on empty area: clear everything
+            MC.clearHighlight();
+            hidePeek();
+            _selectedCard = null;
+            return;
+          }
+          var code = card.dataset.mcCode;
+          if (!code) return;
+
+          if (_selectedCard === card) {
+            // Second tap on same card: open modal
+            MC.openModal(code);
+            hidePeek();
+            MC.clearHighlight();
+            _selectedCard = null;
+            return;
+          }
+
+          // First tap: highlight + show peek
+          MC.clearHighlight();
+          MC.highlightChain(code);
+          showPeek(code);
+          _selectedCard = card;
+        } else {
+          // DESKTOP: click = open modal directly
+          if (!card) return;
+          var code2 = card.dataset.mcCode;
+          if (code2) MC.openModal(code2);
+        }
+      });
+
+      // Touch: tap outside grid clears too
+      document.addEventListener('click', function(e) {
+        if (!_isTouch || !_selectedCard) return;
+        if (!e.target.closest('.mc-grid') && !e.target.closest('.mc-peek')) {
+          MC.clearHighlight();
+          hidePeek();
+          _selectedCard = null;
+        }
+      });
+
+      // ---- Hover: highlight + tooltip (desktop only, ignored on touch) ----
       gridEl.addEventListener('mouseover', function(e) {
+        if (_isTouch) return;
         var card = e.target.closest('.mc-card');
         if (!card || card === currentHoverCard) return;
         if (currentHoverCard) { MC.hideTooltip(); MC.clearHighlight(); }
@@ -1479,6 +1612,7 @@
       });
 
       gridEl.addEventListener('mouseout', function(e) {
+        if (_isTouch) return;
         var card = e.target.closest('.mc-card');
         if (!card) return;
         var related = e.relatedTarget;
