@@ -95,12 +95,6 @@
       line-height: 0.98;
       letter-spacing: 0;
     }
-    .intro p {
-      margin: 18px 0 0;
-      color: var(--muted);
-      max-width: 34rem;
-      font-size: 1rem;
-    }
     .plans {
       display: grid;
       gap: 14px;
@@ -108,8 +102,8 @@
     .plan {
       position: relative;
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      justify-content: center;
       min-height: 220px;
       padding: 24px;
       text-decoration: none;
@@ -119,13 +113,14 @@
       border-radius: 8px;
       box-shadow: var(--shadow);
       overflow: hidden;
-      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
     }
     .plan:hover,
     .plan:focus-visible {
       transform: translateY(-2px);
       background: var(--surface-strong);
       border-color: rgba(255,255,255,0.28);
+      box-shadow: 0 28px 78px rgba(0,0,0,0.42);
       outline: none;
     }
     .plan::before {
@@ -137,29 +132,37 @@
     }
     .plan h2 {
       margin: 0;
-      font-size: 1.8rem;
-      line-height: 1.1;
+      font-size: clamp(3rem, 6vw, 5.6rem);
+      line-height: 1;
       letter-spacing: 0;
-    }
-    .plan__footer {
-      margin-top: auto;
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: center;
-      color: var(--text);
-      font-weight: 700;
-      font-size: 0.9rem;
+      text-align: center;
     }
     .plan__arrow {
-      width: 34px;
-      height: 34px;
+      position: absolute;
+      right: 22px;
+      bottom: 22px;
+      width: 46px;
+      height: 46px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      background: rgba(255,255,255,0.12);
-      flex: 0 0 auto;
+      color: var(--text);
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+    .plan__arrow svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 2.4;
+    }
+    .plan:hover .plan__arrow,
+    .plan:focus-visible .plan__arrow {
+      transform: translateX(3px);
+      background: color-mix(in srgb, var(--accent) 32%, rgba(255,255,255,0.12));
+      border-color: color-mix(in srgb, var(--accent) 58%, rgba(255,255,255,0.22));
     }
     @media (max-width: 760px) {
       header { padding: 0 16px; }
@@ -168,8 +171,8 @@
       main { align-items: start; padding: 24px 0 32px; }
       .panel { grid-template-columns: 1fr; gap: 18px; }
       .intro { padding: 12px 0 2px; }
-      .intro p { font-size: 0.94rem; }
       .plan { min-height: 190px; padding: 20px; }
+      .plan__arrow { width: 42px; height: 42px; right: 18px; bottom: 18px; }
     }
   </style>
 </head>
@@ -190,18 +193,22 @@
       <div class="plans">
         <a class="plan" href="./malla-o.html" style="--accent: var(--blue)" aria-label="Abrir malla Plan O">
           <h2>Plan O</h2>
-          <div class="plan__footer">
-            <span>Abrir malla O</span>
-            <span class="plan__arrow" aria-hidden="true">-&gt;</span>
-          </div>
+          <span class="plan__arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"></path>
+              <path d="m13 6 6 6-6 6"></path>
+            </svg>
+          </span>
         </a>
 
         <a class="plan" href="./malla-p.html" style="--accent: var(--pink)" aria-label="Abrir malla Plan P">
           <h2>Plan P</h2>
-          <div class="plan__footer">
-            <span>Abrir malla P</span>
-            <span class="plan__arrow" aria-hidden="true">-&gt;</span>
-          </div>
+          <span class="plan__arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"></path>
+              <path d="m13 6 6 6-6 6"></path>
+            </svg>
+          </span>
         </a>
       </div>
     </section>
